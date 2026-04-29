@@ -15,7 +15,7 @@ const Callback = () => {
     if (code) {
       processed.current = true; 
       
-      axios.get(`http://127.0.0.1:5000/api/auth/callback?code=${code}`)
+      axios.get(`${import.meta.env.VITE_API_URL}/api/auth/callback?code=${code}`)
         .then(response => {
           if (response.data && response.data.access_token) {
             localStorage.setItem('spotify_token', response.data.access_token);

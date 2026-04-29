@@ -17,7 +17,7 @@ axios.interceptors.response.use(
         try {
           console.warn("Token caducado. Intentando refresh silencioso...");
           
-          const res = await axios.get(`http://127.0.0.1:5000/api/auth/refresh?refreshToken=${refreshToken}`);
+          const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/refresh?refreshToken=${refreshToken}`);
           
           const { access_token } = res.data; 
 
@@ -30,11 +30,11 @@ axios.interceptors.response.use(
           console.error("Falló el refresh token. Forzando login manual.");
           localStorage.removeItem('spotify_token');
           localStorage.removeItem('spotify_refresh_token');
-          window.location.href = 'http://127.0.0.1:5000/api/auth/login';
+          window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/login`;
         }
       } else {
         localStorage.removeItem('spotify_token');
-        window.location.href = 'http://127.0.0.1:5000/api/auth/login';
+        window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/login`;
       }
     }
     
@@ -149,7 +149,7 @@ function App() {
 
   const loadPlaylists = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:5000/api/music/playlists', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/music/playlists`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPlaylists(res.data);
@@ -165,7 +165,7 @@ function App() {
     setLoadingTracks(true);
     setSelectedPlaylist(playlist);
     try {
-      const res = await axios.get(`http://127.0.0.1:5000/api/music/playlists/${playlist.id}`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/music/playlists/${playlist.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTracks(res.data);
@@ -221,7 +221,7 @@ function App() {
           <span style={{ fontSize: '0.5rem', color: '#fff' }}>WEB PLAYER SYSTEM v1.0</span>
         </h1>
         <button
-          onClick={() => window.location.href = 'http://127.0.0.1:5000/api/auth/login'}
+          onClick={() => window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/login`}
           className="login-btn"
         >
           INICIAR SESION
