@@ -1,14 +1,13 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
-
 EXPOSE 10000
 ENV ASPNETCORE_URLS=http://+:10000
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["RetroSpotify.Server.csproj", "./"]
-RUN dotnet restore "./RetroSpotify.Server.csproj"
+RUN dotnet restore "RetroSpotify.Server.csproj"
 
 COPY . .
 RUN dotnet build "RetroSpotify.Server.csproj" -c Release -o /app/build
