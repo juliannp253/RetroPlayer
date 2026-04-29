@@ -1,0 +1,15 @@
+# Node (Frontend)
+node_modules/
+dist/
+.env
+
+# .NET (Backend)
+bin/
+obj/
+appsettings.json
+appsettings.Development.json
+
+# Varios
+.vs/
+.vscode/
+*.user

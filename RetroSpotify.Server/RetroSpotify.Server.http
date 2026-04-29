@@ -1,0 +1,6 @@
+@RetroSpotify.Server_HostAddress = http://localhost:5155
+
+GET {{RetroSpotify.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

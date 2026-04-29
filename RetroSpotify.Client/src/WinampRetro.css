@@ -1,0 +1,29 @@
+/* WinampRetro.css */
+
+:root {
+  --bg-color: #1a1a1a;    
+  --panel-bg: #2a2a2a;   
+  --matrix-green: #00ff00; 
+  --border-color: #3a3a3a; 
+  --glow-color: rgba(0, 255, 0, 0.4);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  font-family: 'Courier New', Courier, monospace; 
+  color: var(--matrix-green);
+  text-transform: uppercase; 
+}
+
+.retro-text {
+  text-shadow: 0 0 5px var(--glow-color);
+}
+
+.retro-panel {
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5); 
+  margin-bottom: 10px;
+}
