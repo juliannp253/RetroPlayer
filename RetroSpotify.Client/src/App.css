@@ -362,3 +362,85 @@ body {
   background: var(--sp-green-hover);
   transform: scale(1.02);
 }
+
+@media (max-width: 768px) {
+  .app-container {
+    grid-template-columns: 200px 1fr;
+  }
+
+  .playlist-title-large {
+    font-size: 0.9rem;
+  }
+
+  .now-playing-info {
+    width: 35%;
+  }
+
+  .player-controls {
+    max-width: 45%;
+  }
+
+  .volume-controls {
+    width: 20%;
+  }
+
+  .vol-slider {
+    width: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 180px;
+  }
+
+  .sidebar {
+    display: none; 
+  }
+
+  .main-view {
+    grid-column: 1;
+  }
+
+  .main-header {
+    padding: 12px;
+  }
+
+  .playlist-title-large {
+    font-size: 0.7rem;
+  }
+
+  .main-content {
+    padding: 8px;
+  }
+
+  .bottom-bar {
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .now-playing-info {
+    width: 100%;
+  }
+
+  .player-controls {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .volume-controls {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .np-title {
+    font-size: 0.4rem;
+  }
+
+  .np-artist {
+    font-size: 0.35rem;
+  }
+}
