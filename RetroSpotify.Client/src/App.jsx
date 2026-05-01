@@ -42,6 +42,13 @@ axios.interceptors.response.use(
   }
 );
 
+const PixelPause = () => (
+  <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+    <rect x="4" y="3" width="3" height="10" />
+    <rect x="9" y="3" width="3" height="10" />
+  </svg>
+);
+
 const PixelPrev = () => (
   <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
     <rect x="2" y="4" width="2" height="8" />
@@ -472,7 +479,7 @@ function App() {
             </button>
             {/* Botón dinámico Play/Pausa */}
             <button className="btn-play" onClick={() => handleControl('toggle')}>
-              {isPlaying ? '⏸' : '▶'}
+              {isPlaying ? <PixelPause /> : '▶'}
             </button>
             <button className="btn-ctrl" onClick={() => handleControl('next')}>
               <PixelNext />
