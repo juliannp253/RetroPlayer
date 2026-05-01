@@ -14,7 +14,7 @@ builder.Services.AddScoped<ISpotifyMusicService, SpotifyMusicService>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
-        policy => policy.WithOrigins("https://retroplayer-front.onrender.com")
+        policy => policy.WithOrigins("https://retroplayer-front.onrender.com", "http://127.0.0.1:5173")
                         .AllowAnyMethod()
                         .AllowAnyHeader());
 });

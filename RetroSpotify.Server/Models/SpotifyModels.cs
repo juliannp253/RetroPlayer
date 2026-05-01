@@ -55,11 +55,13 @@ public record SpotifyImage(
 );
 
 public record SpotifyPlaylistDetailResponse(
-    [property: JsonPropertyName("items")] SpotifyPlaylistTracksContainer? Tracks
+    [property: JsonPropertyName("items")] SpotifyPlaylistTracksContainer? Items
 );
 
 public record SpotifyPlaylistTracksContainer(
-    [property: JsonPropertyName("items")] List<SpotifyPlaylistItem>? Items  
+    [property: JsonPropertyName("items")] List<SpotifyPlaylistItem>? Items,
+    [property: JsonPropertyName("next")] string? Next,
+    [property: JsonPropertyName("total")] int Total
 );
 public record SpotifyPlaylistItem(
     [property: JsonPropertyName("item")] SpotifyTrack? Track

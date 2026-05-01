@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import './App.css';
 import { useSpotifyPlayer } from './hooks/useSpotifyPlayer';
@@ -42,7 +42,6 @@ axios.interceptors.response.use(
   }
 );
 
-// ICONOS PIXELEADOS
 const PixelPrev = () => (
   <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
     <rect x="2" y="4" width="2" height="8" />
@@ -100,16 +99,36 @@ function App() {
   const [tracks, setTracks] = useState([]);
   const [loadingTracks, setLoadingTracks] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null);
-
-  const token = localStorage.getItem('spotify_token');
-  const { player, deviceId, isReady } = useSpotifyPlayer(token);
-
+  const [isWakingUp, setIsWakingUp] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progressMs, setProgressMs] = useState(0);
-
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
+  const tracksRef = useRef([]);
+  const deviceIdRef = useRef(null);
+  const tokenRef = useRef(null);
+  const playerRef = useRef(null);  
+  
+  const token = localStorage.getItem('spotify_token');
+  tokenRef.current = token;
+
+  const { player, deviceId, isReady } = useSpotifyPlayer(token, null);
+
+  useEffect(() => {
+    deviceIdRef.current = deviceId;
+  }, [deviceId]);
+  
+  useEffect(() => {
+    tracksRef.current = tracks;
+  }, [tracks]);
+
+  useEffect(() => {
+    playerRef.current = player;
+  }, [player]);
+
+  // HELPERS
   const getDurationMs = (durationStr) => {
     if (!durationStr) return 0;
     const [mins, secs] = durationStr.split(':').map(Number);
@@ -123,10 +142,114 @@ function App() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  useEffect(() => { 
-    if (token) loadPlaylists(); 
-  }, [token]);
+  // PLAY TRACK
+  const playTrack = async (track, index) => {
+    const currentDeviceId = deviceIdRef.current;
+    const currentToken = tokenRef.current;
+ 
+    if (!currentDeviceId || !track?.uri) return;
+ 
+    try {
+      const list = tracksRef.current;
+      const urisFromHere = list.slice(index).map(t => t.uri);
+ 
+      await axios.put(
+        `https://api.spotify.com/v1/me/player/play?device_id=${currentDeviceId}`,
+        { uris: urisFromHere },
+        { headers: { Authorization: `Bearer ${currentToken}` } }
+      );
+ 
+      setCurrentTrack(track);
+      setCurrentIndex(index);
+      setProgressMs(0);
+      setIsPlaying(true);
+    } catch (err) {
+      console.error('Error reproduciendo track:', err);
+    }
+  };
 
+  // CONECTAR SDK
+  useEffect(() => {
+    if (!player) return;
+ 
+    const handleStateChanged = (state) => {
+      if (!state) return;
+ 
+      const finished =
+        state.paused &&
+        state.position === 0 &&
+        state.track_window.previous_tracks.length > 0;
+ 
+      if (finished) {
+        const list = tracksRef.current;
+        setCurrentIndex(prev => {
+          const nextIndex = prev + 1;
+          if (nextIndex < list.length) {
+            playTrack(list[nextIndex], nextIndex);
+          }
+          return nextIndex < list.length ? nextIndex : prev;
+        });
+        return;
+      }
+ 
+      setIsPlaying(!state.paused);
+    };
+ 
+    player.removeListener('player_state_changed');
+    player.addListener('player_state_changed', handleStateChanged);
+ 
+    return () => {
+      player.removeListener('player_state_changed');
+    };
+  }, [player, currentIndex]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      const list = tracksRef.current;
+      setCurrentIndex(prev => {
+        const prevIndex = Math.max(prev - 1, 0);
+        playTrack(list[prevIndex], prevIndex);
+        return prevIndex;
+      });
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      const list = tracksRef.current;
+      setCurrentIndex(prev => {
+        const nextIndex = prev + 1;
+        if (nextIndex < list.length) {
+          playTrack(list[nextIndex], nextIndex);
+          return nextIndex;
+        }
+        return prev;
+      });
+    });
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      playerRef.current?.togglePlay();
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      playerRef.current?.togglePlay();
+    });
+
+  }, [player]);
+
+    useEffect(() => {
+    if (!currentTrack || !('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.name,
+      artist: currentTrack.artist,
+      artwork: currentTrack.albumArt
+        ? [{ src: currentTrack.albumArt, sizes: '640x640', type: 'image/jpeg' }]
+        : []
+    });
+  }, [currentTrack]);
+
+  // BARRA DE PROGRESO
   useEffect(() => {
     let interval = null;
     if (isPlaying) {
@@ -147,7 +270,13 @@ function App() {
     return () => clearInterval(interval);
   }, [isPlaying, currentTrack]);
 
+  // CARGA INICIAL
+  useEffect(() => { 
+    if (token) loadPlaylists(); 
+  }, [token]);
+
   const loadPlaylists = async () => {
+    setIsWakingUp(true); 
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/music/playlists`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -158,6 +287,8 @@ function App() {
       }
     } catch (err) {
       console.error('Error cargando playlists:', err);
+    } finally {
+      setIsWakingUp(false); 
     }
   };
 
@@ -176,38 +307,29 @@ function App() {
     }
   };
 
-  const playTrack = async (track) => {
-    if (!deviceId || !track.uri) return;
-    try {
-      await axios.put(
-        `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
-        { uris: [track.uri] },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setCurrentTrack(track);
-      setProgressMs(0); 
-      setIsPlaying(true);
-    } catch (err) {
-      console.error('Error reproduciendo track:', err);
-    }
-  };
-
+  // CONTROLES
   const handleControl = async (action) => {
     if (!isReady || !player) return;
+    const list = tracksRef.current;
+
     switch (action) {
-      case 'prev':   
-        await player.previousTrack(); 
-        setProgressMs(0);
+      case 'prev': {
+        const prevIndex = Math.max(currentIndex - 1, 0);
+        await playTrack(list[prevIndex], prevIndex);
         break;
-      case 'toggle': 
+      }
+      case 'toggle':
         await player.togglePlay();
-        setIsPlaying(!isPlaying); 
+        setIsPlaying(!isPlaying);
         break;
-      case 'next':   
-        await player.nextTrack(); 
-        setProgressMs(0);
+      case 'next': {
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < list.length) {
+          await playTrack(list[nextIndex], nextIndex);
+        }
         break;
-      default:       
+      }
+      default:
         break;
     }
   };
@@ -217,8 +339,8 @@ function App() {
     return (
       <div className="login-screen">
         <h1 style={{ color: 'var(--sp-green)', fontSize: '1.2rem', textAlign: 'center', lineHeight: '1.5' }}>
-          PIXEL SPOTIFY<br/>
-          <span style={{ fontSize: '0.5rem', color: '#fff' }}>WEB PLAYER SYSTEM v1.0</span>
+          RETRO PLAYER SPOTIFY<br/>
+          <span style={{ fontSize: '0.5rem', color: '#fff' }}>WEB SYSTEM v1.0</span>
         </h1>
         <button
           onClick={() => window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/login`}
@@ -234,7 +356,7 @@ function App() {
   return (
     <div className="app-container">
       
-      {/* 1. BARRA LATERAL (Tu Biblioteca) */}
+      {/* BARRA LATERAL */}
       <div className="panel sidebar">
         <div className="sidebar-header">
           <span>|||</span> Tu biblioteca
@@ -252,7 +374,7 @@ function App() {
         </div>
       </div>
 
-      {/* 2. VISTA PRINCIPAL (Contenido de Playlist) */}
+      {/* VISTA PRINCIPAL CONTENIDO */}
       <div className="panel main-view">
         {selectedPlaylist ? (
           <>
@@ -283,7 +405,7 @@ function App() {
                         <tr 
                           key={`${track.id}-${index}`} 
                           className={`track-row ${isActive ? 'active' : ''}`}
-                          onClick={() => playTrack(track)}
+                          onClick={() => playTrack(track, index)}
                         >
                           <td>{isActive ? '▶' : index + 1}</td>
                           <td>
@@ -304,7 +426,7 @@ function App() {
         )}
       </div>
 
-      {/* 3. BARRA INFERIOR (Reproductor) */}
+      {/* REPRODUCTOR */}
       <div className="bottom-bar">
         
         {/* Info del Track Actual */}
@@ -365,10 +487,8 @@ function App() {
           </div>
           
           <div className="progress-container">
-            {/* Texto de progreso actualizado dinámicamente */}
             <span>{formatProgress(progressMs)}</span>
             <div className="progress-bar">
-              {/* Barra de progreso actualizada dinámicamente */}
               <div 
                 className="progress-fill" 
                 style={{ 
@@ -382,7 +502,6 @@ function App() {
           </div>
         </div>
 
-        {/* Controles de Volumen y Estado */}
         <div className="volume-controls">
           <span style={{ fontSize: '0.4rem', color: isReady ? 'var(--sp-green)' : '#888', marginRight: '8px' }}>
             {isReady ? 'ONLINE' : 'INIT...'}

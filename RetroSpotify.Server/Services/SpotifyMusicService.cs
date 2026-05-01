@@ -63,24 +63,32 @@ public class SpotifyMusicService : ISpotifyMusicService
     {
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        var response = await _httpClient.GetAsync($"https://api.spotify.com/v1/playlists/{playlistId}");
+        var allTracks = new List<TrackDto>();
 
-        var rawJson = await response.Content.ReadAsStringAsync();
+        var response = await _httpClient.GetAsync($"https://api.spotify.com/v1/playlists/{playlistId}?limit=100");
+        if (!response.IsSuccessStatusCode) return allTracks;
 
-        if (!response.IsSuccessStatusCode) return new List<TrackDto>();
+        var data = await response.Content.ReadFromJsonAsync<SpotifyPlaylistDetailResponse>();
 
-        var data = System.Text.Json.JsonSerializer.Deserialize<SpotifyPlaylistDetailResponse>(rawJson);
+        if (data?.Items?.Items != null)
+            allTracks.AddRange(MapItems(data.Items.Items));
 
-        return data?.Tracks?.Items?
-            .Where(i => i.Track != null)
-            .Select(i => new TrackDto(
-                i.Track!.Id,
-                i.Track.Name,
-                i.Track.Artists?.FirstOrDefault()?.Name ?? "Unknown Artist",
-                FormatDuration(i.Track.DurationMs),
-                i.Track.Album?.Images?.FirstOrDefault()?.Url ?? "",
-                i.Track.Uri
-            )).ToList() ?? new List<TrackDto>();
+        var nextUrl = data?.Items?.Next;
+
+        while (!string.IsNullOrEmpty(nextUrl))
+        {
+            var pageResponse = await _httpClient.GetAsync(nextUrl);
+            if (!pageResponse.IsSuccessStatusCode) break;
+
+            var pageData = await pageResponse.Content.ReadFromJsonAsync<SpotifyPlaylistTracksContainer>();
+
+            if (pageData?.Items != null)
+                allTracks.AddRange(MapItems(pageData.Items));
+
+            nextUrl = pageData?.Next;
+        }
+
+        return allTracks;
     }
 
     private string FormatDuration(int ms)
@@ -88,4 +96,16 @@ public class SpotifyMusicService : ISpotifyMusicService
         var t = TimeSpan.FromMilliseconds(ms);
         return $"{t.Minutes:D2}:{t.Seconds:D2}";
     }
+
+    private IEnumerable<TrackDto> MapItems(List<SpotifyPlaylistItem> items) =>
+    items
+        .Where(i => i.Track != null)
+        .Select(i => new TrackDto(
+            i.Track!.Id,
+            i.Track.Name,
+            i.Track.Artists?.FirstOrDefault()?.Name ?? "Unknown Artist",
+            FormatDuration(i.Track.DurationMs),
+            i.Track.Album?.Images?.FirstOrDefault()?.Url ?? "",
+            i.Track.Uri
+        ));
 }
