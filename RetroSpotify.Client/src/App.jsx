@@ -101,6 +101,8 @@ function App() {
   const [loadingTracks, setLoadingTracks] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null);
 
+  const [isWakingUp, setIsWakingUp] = useState(false);
+
   const token = localStorage.getItem('spotify_token');
   const { player, deviceId, isReady } = useSpotifyPlayer(token);
 
@@ -148,6 +150,7 @@ function App() {
   }, [isPlaying, currentTrack]);
 
   const loadPlaylists = async () => {
+    setIsWakingUp(true); 
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/music/playlists`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -158,6 +161,8 @@ function App() {
       }
     } catch (err) {
       console.error('Error cargando playlists:', err);
+    } finally {
+      setIsWakingUp(false); 
     }
   };
 
