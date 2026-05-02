@@ -17,7 +17,10 @@ axios.interceptors.response.use(
         try {
           console.warn("Token caducado. Intentando refresh silencioso...");
           
-          const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/refresh?refreshToken=${refreshToken}`);
+          const res = await axios.get(
+            `${import.meta.env.VITE_API_URL}/api/auth/refresh?refreshToken=${refreshToken}`,
+            { timeout: 60000 }
+          );
           
           const { access_token } = res.data; 
 
