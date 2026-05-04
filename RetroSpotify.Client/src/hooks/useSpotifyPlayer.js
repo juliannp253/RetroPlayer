@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import axios from 'axios'; 
 
 export const useSpotifyPlayer = (token, onPlayerStateChanged) => {
   const [player, setPlayer] = useState(null);
@@ -21,7 +22,24 @@ export const useSpotifyPlayer = (token, onPlayerStateChanged) => {
     window.onSpotifyWebPlaybackSDKReady = () => {
       const spotifyPlayer = new window.Spotify.Player({
         name: 'RetroSpotify Web Player',
-        getOAuthToken: cb => { cb(token); },
+        
+        getOAuthToken: async (cb) => {
+          let currentToken = localStorage.getItem('spotify_token');
+
+          try {
+            await axios.get('https://api.spotify.com/v1/me', {
+              headers: { Authorization: `Bearer ${currentToken}` }
+            });
+
+            const validToken = localStorage.getItem('spotify_token');
+            cb(validToken);
+
+          } catch (error) {
+            console.error("Error al validar el token para el Player SDK:", error);
+            cb(currentToken);
+          }
+        },
+        
         volume: 0.5
       });
 
@@ -50,7 +68,7 @@ export const useSpotifyPlayer = (token, onPlayerStateChanged) => {
         player.disconnect();
       }
     };
-  }, [token]);
+  }, [token]); 
 
   return { player, deviceId, isReady };
 };
